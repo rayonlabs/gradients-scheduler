@@ -1,0 +1,200 @@
+import json
+import os
+import tempfile
+import uuid
+from datetime import timedelta
+from logging import getLogger
+from typing import Optional, Tuple
+
+import datasets
+import yaml
+from huggingface_hub import HfApi
+from minio import Minio
+from peft import PeftModel
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+from gradients_worker.config import settings
+
+logger = getLogger(__name__)
+
+
+async def merge_and_upload_model(
+    lora_model_id: str, base_model_id: str, anonimize: bool = True
+) -> str:
+    """Merge LoRA with base model and upload to HF hub.
+
+    Args:
+        lora_model_id: The HF ID of the LoRA adapter
+        base_model_id: The HF ID of the base model
+
+    Returns:
+        str: The new model repo ID
+    """
+    logger.info(f"Merging LoRA {lora_model_id} with base model {base_model_id}")
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        if anonimize:
+            new_repo_name = str(uuid.uuid4())
+        else:
+            new_repo_name = f"merged-{lora_model_id.split('/')[-1]}"
+
+        new_repo_id = f"{settings.HF_USERNAME}/{new_repo_name}"
+
+        api = HfApi()
+        if api.repo_exists(new_repo_id):
+            logger.info(f"Model {new_repo_id} already exists, skipping merge")
+            return new_repo_id
+
+        merged_path = os.path.join(tmp_dir, "merged_model")
+        tokenizer = AutoTokenizer.from_pretrained(base_model_id)
+
+        try:
+            base_model = AutoModelForCausalLM.from_pretrained(
+                base_model_id, device_map="auto"
+            )
+            model = PeftModel.from_pretrained(base_model, lora_model_id)
+            merged_model = model.merge_and_unload()
+        except Exception as e:
+            logger.warning(
+                f"Failed to merge LoRA: {e}. Downloading models directly instead."
+            )
+            merged_model = AutoModelForCausalLM.from_pretrained(
+                lora_model_id, device_map="auto"
+            )
+
+        merged_model.save_pretrained(merged_path)
+        tokenizer.save_pretrained(merged_path)
+
+        api.create_repo(new_repo_id, private=False)
+        api.upload_folder(
+            folder_path=merged_path,
+            repo_id=new_repo_id,
+            commit_message="Upload merged model",
+        )
+
+        logger.info(f"Successfully merged and uploaded model to {new_repo_id}")
+        return new_repo_id
+
+
+async def update_model_tokenizer(model_id: str, tokenizer_id: str) -> str:
+    """Update a model with a new tokenizer and upload to HF hub.
+
+    Args:
+        model_id: The HF ID of the model to update
+        tokenizer_id: The HF ID of the tokenizer to use
+
+    Returns:
+        str: The new model repo ID
+    """
+    model_parts = model_id.split("/")
+    new_repo_name = f"{model_parts[0]}__{model_parts[1]}-with-tokenizer"
+    new_repo_id = f"{settings.HF_USERNAME}/{new_repo_name}"
+
+    api = HfApi()
+    if api.repo_exists(new_repo_id):
+        logger.info(f"Model {new_repo_id} already exists, skipping update")
+        return new_repo_id
+
+    logger.info(f"Updating model {model_id} with tokenizer from {tokenizer_id}")
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        model = AutoModelForCausalLM.from_pretrained(model_id)
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_id)
+
+        merged_path = os.path.join(tmp_dir, "updated_model")
+        model.save_pretrained(merged_path)
+        tokenizer.save_pretrained(merged_path)
+
+        api.create_repo(new_repo_id, private=False)
+        api.upload_folder(
+            folder_path=merged_path,
+            repo_id=new_repo_id,
+            commit_message=f"Update model with {tokenizer_id} tokenizer",
+        )
+
+        logger.info(f"Successfully updated model and uploaded to {new_repo_id}")
+        return new_repo_id
+
+
+def save_dataset_to_temp(
+    dataset: datasets.Dataset, prefix: str = "dataset_"
+) -> Tuple[str, int]:
+    """Save a dataset to a temporary JSON file.
+
+    Args:
+        dataset: The dataset to save
+        prefix: Prefix for the temporary file name
+
+    Returns:
+        Tuple[str, int]: Path to the temporary file and its size
+    """
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".json", prefix=prefix)
+
+    data = dataset.to_list()
+
+    with open(temp_file.name, "w") as f:
+        json.dump(data, f)
+
+    file_size = os.path.getsize(temp_file.name)
+    return temp_file.name, file_size
+
+
+def upload_to_minio(
+    file_path: str,
+    object_name: str,
+    expires: int = 604800,  # 7 days in seconds
+) -> Optional[str]:
+    """Upload a file to Minio and return a presigned URL.
+
+    Args:
+        file_path: Path to the file to upload
+        object_name: Name to give the object in Minio
+        expires: Expiration time in seconds for presigned URL
+
+    Returns:
+        str | None: Presigned URL of the uploaded file if successful, None otherwise
+    """
+    endpoint = os.environ["S3_COMPATIBLE_ENDPOINT"]
+    access_key = os.environ["S3_COMPATIBLE_ACCESS_KEY"]
+    secret_key = os.environ["S3_COMPATIBLE_SECRET_KEY"]
+    bucket_name = os.environ["S3_BUCKET_NAME"]
+
+    try:
+        client = Minio(
+            endpoint,
+            access_key=access_key,
+            secret_key=secret_key,
+            secure=True,
+        )
+
+        result = client.fput_object(bucket_name, object_name, file_path)
+
+        if result:
+            url = client.presigned_get_object(
+                bucket_name, object_name, expires=timedelta(seconds=expires)
+            )
+            return url
+        return None
+
+    except Exception as e:
+        logger.error(f"Error uploading to Minio: {e}")
+        return None
+
+
+def load_config(config_path: str) -> dict:
+    """Load configuration from a YAML file.
+
+    Args:
+        config_path: Path to the configuration file
+
+    Returns:
+        dict: The loaded configuration
+    """
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    config_file_path = os.path.join(current_dir, config_path)
+
+    logger.info(f"Loading configuration from {config_file_path}")
+    with open(config_file_path, "r") as f:
+        config = yaml.safe_load(f)
+
+    return config
