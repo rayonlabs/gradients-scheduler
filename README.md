@@ -50,7 +50,7 @@ python -m gradients_worker.main
 ```
 
 Configuration Files
-The main configuration is in config.yaml
+The main configuration is in `config.yaml`. You need to create your own `config.yaml` file (not tracked by git) based on the provided `example-config.yaml`.
 
 ```yaml
 ########################################################
