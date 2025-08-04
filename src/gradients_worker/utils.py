@@ -67,9 +67,12 @@ async def merge_and_upload_model(
         merged_path = os.path.join(tmp_dir, "merged_model")
         tokenizer = AutoTokenizer.from_pretrained(base_model_id)
 
+        device_map = "cpu" if settings.USE_CPU_FOR_MODELS else "auto"
+        logger.info(f"Loading models with device_map: {device_map}")
+
         try:
             base_model = AutoModelForCausalLM.from_pretrained(
-                base_model_id, device_map="auto"
+                base_model_id, device_map=device_map
             )
             model = PeftModel.from_pretrained(base_model, lora_model_id)
             merged_model = model.merge_and_unload()
@@ -78,7 +81,7 @@ async def merge_and_upload_model(
                 f"Failed to merge LoRA: {e}. Downloading models directly instead."
             )
             merged_model = AutoModelForCausalLM.from_pretrained(
-                lora_model_id, device_map="auto"
+                lora_model_id, device_map=device_map
             )
 
         merged_model.save_pretrained(merged_path)
@@ -117,7 +120,10 @@ async def update_model_tokenizer(model_id: str, tokenizer_id: str) -> str:
     logger.info(f"Updating model {model_id} with tokenizer from {tokenizer_id}")
 
     with tempfile.TemporaryDirectory() as tmp_dir:
-        model = AutoModelForCausalLM.from_pretrained(model_id)
+        device_map = "cpu" if settings.USE_CPU_FOR_MODELS else "auto"
+        logger.info(f"Loading models with device_map: {device_map}")
+
+        model = AutoModelForCausalLM.from_pretrained(model_id, device_map=device_map)
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_id)
 
         merged_path = os.path.join(tmp_dir, "updated_model")

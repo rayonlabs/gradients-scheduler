@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     S3_COMPATIBLE_SECRET_KEY: str | None = None
     S3_BUCKET_NAME: str | None = None
 
+    # Model loading configuration
+    USE_CPU_FOR_MODELS: bool = False
+
     class Config:
         env_file = ".env"
 
