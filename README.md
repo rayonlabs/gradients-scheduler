@@ -35,6 +35,9 @@ S3_COMPATIBLE_ACCESS_KEY=your_s3_access_key
 S3_COMPATIBLE_SECRET_KEY=your_s3_secret_key
 S3_BUCKET_NAME=your_bucket_name
 
+# Model loading configuration (optional)
+USE_CPU_FOR_MODELS=false  # Set to true to use CPU instead of GPU for model merging and tokenizer updates
+
 # Delay settings (all optional)
 MIN_HOURS_BETWEEN_RUNS=6
 MAX_HOURS_BETWEEN_RUNS=8
