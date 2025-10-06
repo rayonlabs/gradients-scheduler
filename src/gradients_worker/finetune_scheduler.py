@@ -337,14 +337,9 @@ class GradientsTrainingScheduler:
         logger.info("Creating training task")
 
         try:
-            if self.task_type == TaskType.INSTRUCTTEXTWITHFIXEDDATASETS:
-                task = await self.api.create_training_task_with_fixed_datasets(
-                    self.task_request
-                )
-            elif self.task_type == TaskType.INSTRUCTTEXT:
-                task = await self.api.create_training_task(self.task_request)
-            elif self.task_type == TaskType.CHAT:
-                task = await self.api.create_chat_training_task(self.task_request)
+            task = await self.api.create_training_task_by_type(
+                self.task_type, self.task_request
+            )
 
             task_id = task.task_id
             logger.info(f"Training task created with ID: {task_id}")

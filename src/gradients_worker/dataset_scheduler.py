@@ -89,14 +89,17 @@ class DatasetsScheduler:
 
     def _standardize_dataset(self, dataset: Dataset, ds_config: dict) -> Dataset:
         """Standardize dataset column names to instruction, input, output.
-
+    
         Args:
             dataset: The dataset to standardize
             ds_config: The dataset configuration with field mappings
 
         Returns:
-            Dataset: Standardized dataset with canonical column names
+            Dataset: Standardized dataset with canonical column names, or original dataset for Chat tasks
         """
+
+        if self.task_type == TaskType.CHAT:
+            return dataset
         field_instruction = ds_config.get("field_instruction")
         field_input = ds_config.get("field_input")
         field_output = ds_config.get("field_output")
@@ -189,11 +192,7 @@ class DatasetsScheduler:
 
             standardized_datasets = []
             for dataset, ds_config in downloaded_datasets:
-                if self.task_type != TaskType.CHAT:
-                    standardized_dataset = self._standardize_dataset(dataset, ds_config)
-                else:
-                    # For Chat task type, use the data  set as-is
-                    standardized_dataset = dataset
+                standardized_dataset = self._standardize_dataset(dataset, ds_config)
                 standardized_datasets.append(standardized_dataset)
                 logger.info(
                     f"Standardized dataset {ds_config['name']} with {len(standardized_dataset)} samples"

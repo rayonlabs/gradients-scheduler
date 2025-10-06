@@ -9,6 +9,7 @@ from gradients_worker.models import (
     TaskRequest,
     TaskResultResponse,
     TaskStatusResponse,
+    TaskType,
     TaskWithFixedDatasetsRequest,
 )
 
@@ -153,3 +154,17 @@ class GradientsAPI:
                 return MinimalTaskWithHotkeyDetails.model_validate(
                     await response.json()
                 )
+
+    async def create_training_task_by_type(
+        self, task_type: TaskType, task_request: TaskRequest | TaskWithFixedDatasetsRequest
+    ) -> NewTaskResponse:
+        """Create a training task by sending a request to the appropriate API endpoint based on task type."""
+        
+        if task_type == TaskType.INSTRUCTTEXTWITHFIXEDDATASETS:
+            return await self.create_training_task_with_fixed_datasets(task_request)
+        elif task_type == TaskType.INSTRUCTTEXT:
+            return await self.create_training_task(task_request)
+        elif task_type == TaskType.CHAT:
+            return await self.create_chat_training_task(task_request)
+        else:
+            raise ValueError(f"Unsupported task type: {task_type}")
