@@ -120,12 +120,12 @@ class GradientsTrainingScheduler:
                 account_id="00000000-0000-0000-0000-000000000000",
                 ds_repo=dataset_url,
                 chat_template="chatml",
-                chat_column=self.task_config.get("chat_column", "conversations"),
-                chat_role_field=self.task_config.get("chat_role_field", "from"),
-                chat_content_field=self.task_config.get("chat_content_field", "value"),
-                chat_user_reference=self.task_config.get("chat_user_reference", "user"),
-                chat_assistant_reference=self.task_config.get("chat_assistant_reference", "assistant"),
-                hours_to_complete=self.task_config.get("hours_to_complete", 8),
+                chat_column=self.task_config.get("chat_column"),
+                chat_role_field=self.task_config.get("chat_role_field"),
+                chat_content_field=self.task_config.get("chat_content_field"),
+                chat_user_reference=self.task_config.get("chat_user_reference"),
+                chat_assistant_reference=self.task_config.get("chat_assistant_reference"),
+                hours_to_complete=self.task_config.get("hours_to_complete"),
                 file_format="s3",
             )
 

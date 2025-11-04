@@ -40,4 +40,12 @@ name-of-the-task:
   random_seed: 45
   # Task type: enum(InstructText, InstructTextWithFixedDatasets, Chat) - see models.py for more details
   # Defaults to InstructText
-  task_type: "InstructText" 
+  task_type: "InstructText"
+
+  # Chat task type specific configuration (only used when task_type is "Chat")
+  # All fields below have defaults and are optional
+  # chat_column: "conversations"           # default: "conversations"
+  # chat_role_field: "from"                # default: "from"
+  # chat_content_field: "value"            # default: "value"
+  # chat_user_reference: "user"            # default: "user"
+  # chat_assistant_reference: "assistant"  # default: "assistant"

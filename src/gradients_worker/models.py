@@ -101,22 +101,22 @@ class TaskRequestChat(BaseModel):
     chat_template: str = Field(
         ..., description="The chat template of the dataset", examples=["chatml"]
     )
-    chat_column: str | None = Field(
-        None,
+    chat_column: str = Field(
+        "conversations",
         description="The column name containing the conversations",
         examples=["conversations"],
     )
-    chat_role_field: str | None = Field(
-        None, description="The column name for the role", examples=["from"]
+    chat_role_field: str = Field(
+        "from", description="The column name for the role", examples=["from"]
     )
-    chat_content_field: str | None = Field(
-        None, description="The column name for the content", examples=["value"]
+    chat_content_field: str = Field(
+        "value", description="The column name for the content", examples=["value"]
     )
-    chat_user_reference: str | None = Field(
-        None, description="The user reference", examples=["user"]
+    chat_user_reference: str = Field(
+        "user", description="The user reference", examples=["user"]
     )
-    chat_assistant_reference: str | None = Field(
-        None, description="The assistant reference", examples=["assistant"]
+    chat_assistant_reference: str = Field(
+        "assistant", description="The assistant reference", examples=["assistant"]
     )
 
     ds_repo: str = Field(
