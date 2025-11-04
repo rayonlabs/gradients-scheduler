@@ -20,11 +20,13 @@ name-of-the-task:
       field_instruction: "instruction"
       field_input: "input" # Optional, can be left empty
       field_output: "output"
+      # max_rows: 10000 # Optional: randomly subsample this dataset to N rows before merging
     # Dataset #2 ...
     - name: "databricks/databricks-dolly-15k"
       field_instruction: "instruction"
       field_input: "context" # Optional, can be left empty
       field_output: "response"
+      # max_rows: 5000 # Optional: randomly subsample this dataset to N rows before merging
     # etc
   # HuggingFace model identifier to be finetuned, it will be downloaded, verified, and merged with its tokenizer
   model_repo: "unsloth/Meta-Llama-3.1-8B"

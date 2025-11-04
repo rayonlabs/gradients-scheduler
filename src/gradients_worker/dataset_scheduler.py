@@ -76,6 +76,14 @@ class DatasetsScheduler:
                 if isinstance(dataset, DatasetDict) and "train" in dataset:
                     dataset = dataset["train"]
 
+                # Apply max_rows subsampling if specified
+                max_rows = ds_config.get("max_rows")
+                if max_rows is not None and len(dataset) > max_rows:
+                    logger.info(
+                        f"Subsampling dataset {dataset_name} from {len(dataset)} to {max_rows} rows"
+                    )
+                    dataset = dataset.shuffle(seed=self.random_seed).select(range(max_rows))
+
                 downloaded_datasets.append((dataset, ds_config))
                 logger.info(
                     f"Successfully downloaded dataset: {dataset_name} with {len(dataset)} samples"
