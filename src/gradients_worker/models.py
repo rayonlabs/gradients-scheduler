@@ -96,20 +96,40 @@ class TaskWithFixedDatasetsRequest(TaskRequest):
 
 
 class TaskRequestChat(BaseModel):
-    account_id: str
     model_repo: str
     hours_to_complete: int
-    chat_template: str = Field(..., description="The chat template of the dataset", examples=["chatml"])
-    chat_column: str | None = Field(None, description="The column name containing the conversations", examples=["conversations"])
-    chat_role_field: str | None = Field(None, description="The column name for the role", examples=["from"])
-    chat_content_field: str | None = Field(None, description="The column name for the content", examples=["value"])
-    chat_user_reference: str | None = Field(None, description="The user reference", examples=["user"])
-    chat_assistant_reference: str | None = Field(None, description="The assistant reference", examples=["assistant"])
+    chat_template: str = Field(
+        ..., description="The chat template of the dataset", examples=["chatml"]
+    )
+    chat_column: str | None = Field(
+        None,
+        description="The column name containing the conversations",
+        examples=["conversations"],
+    )
+    chat_role_field: str | None = Field(
+        None, description="The column name for the role", examples=["from"]
+    )
+    chat_content_field: str | None = Field(
+        None, description="The column name for the content", examples=["value"]
+    )
+    chat_user_reference: str | None = Field(
+        None, description="The user reference", examples=["user"]
+    )
+    chat_assistant_reference: str | None = Field(
+        None, description="The assistant reference", examples=["assistant"]
+    )
 
-    ds_repo: str = Field(..., description="The repository for the dataset", examples=["Magpie-Align/Magpie-Pro-300K-Filtered"])
+    ds_repo: str = Field(
+        ...,
+        description="The repository for the dataset",
+        examples=["Magpie-Align/Magpie-Pro-300K-Filtered"],
+    )
     file_format: Optional[str] = "hf"
-    model_repo: str = Field(..., description="The repository for the model", examples=["Qwen/Qwen2.5-Coder-32B-Instruct"])
-
+    model_repo: str = Field(
+        ...,
+        description="The repository for the model",
+        examples=["Qwen/Qwen2.5-Coder-32B-Instruct"],
+    )
 
 
 class NewTaskResponse(BaseModel):
