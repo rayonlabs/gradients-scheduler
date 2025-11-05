@@ -9,13 +9,14 @@ Clone the repository
 Create a virtual environment:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
+python -m venv scheduler_venv
+source scheduler_venv/bin/activate
 ```
 
 Install the package:
 
 ```bash
+python -m pip install --upgrade pip
 pip install -e .
 ```
 
