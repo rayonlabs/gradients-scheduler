@@ -1,0 +1,27 @@
+# RunPod Serverless Docker Image for Model Merging
+# This container runs on RunPod with GPUs to handle model merge operations
+
+FROM runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies if needed
+RUN apt-get update && apt-get install -y \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY runpod_requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r runpod_requirements.txt
+
+# Copy the handler script
+COPY src/gradients_worker/runpod_handler.py .
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+
+# Start the RunPod serverless worker
+CMD ["python", "-u", "runpod_handler.py"]
