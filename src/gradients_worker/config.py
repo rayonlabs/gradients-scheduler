@@ -21,6 +21,14 @@ class Settings(BaseSettings):
     # Model loading configuration
     USE_CPU_FOR_MODELS: bool = False
 
+    # RunPod configuration
+    USE_RUNPOD_FOR_MERGE: bool = False
+    RUNPOD_API_KEY: str | None = None
+    RUNPOD_ENDPOINT_ID: str | None = None
+    RUNPOD_TIMEOUT: int = 10000  # seconds (~3 hour default)
+    RUNPOD_MAX_RETRIES: int = 3
+    RUNPOD_POLL_INTERVAL: int = 600  # seconds between status checks
+
     class Config:
         env_file = ".env"
 

@@ -2,17 +2,25 @@ import json
 import os
 import subprocess
 import tempfile
+import time
 import uuid
 from datetime import datetime, timedelta
 from logging import getLogger
 from typing import Optional, Tuple
 
 import datasets
+import runpod
 import torch
 import yaml
 from huggingface_hub import HfApi
 from minio import Minio
 from peft import PeftModel
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from gradients_worker.config import settings
@@ -22,7 +30,7 @@ logger = getLogger(__name__)
 
 class DateTimeEncoder(json.JSONEncoder):
     """Custom JSON encoder that handles datetime objects."""
-    
+
     def default(self, obj):
         if isinstance(obj, datetime):
             return obj.isoformat()
@@ -297,3 +305,72 @@ async def update_model_tokenizer_subprocess(model_id: str, tokenizer_id: str) ->
     except subprocess.CalledProcessError as e:
         logger.error(f"Subprocess failed: {e.stderr}")
         raise Exception(f"Failed to update model tokenizer: {e.stderr}")
+
+
+@retry(
+    stop=stop_after_attempt(lambda: settings.RUNPOD_MAX_RETRIES),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception_type(Exception),
+    reraise=True,
+)
+async def merge_and_upload_model_runpod(
+    lora_model_id: str, base_model_id: str, anonimize: bool = True
+) -> str:
+    """Run merge_and_upload_model on RunPod serverless with automatic retry.
+
+    Args:
+        lora_model_id: The HF ID of the LoRA adapter
+        base_model_id: The HF ID of the base model
+        anonimize: Whether to anonymize the model name
+
+    Returns:
+        str: The new model repo ID
+
+    Raises:
+        Exception: If all retry attempts fail
+    """
+    if not settings.RUNPOD_API_KEY or not settings.RUNPOD_ENDPOINT_ID:
+        raise Exception(
+            "RunPod is not configured. Please set RUNPOD_API_KEY and RUNPOD_ENDPOINT_ID"
+        )
+
+    logger.info(f"Starting RunPod merge: {base_model_id} + {lora_model_id}")
+
+    # Set RunPod API key and initialize endpoint
+    runpod.api_key = settings.RUNPOD_API_KEY
+    endpoint = runpod.Endpoint(settings.RUNPOD_ENDPOINT_ID)
+    job = endpoint.run(
+        {
+            "input": {
+                "lora_model_id": lora_model_id,
+                "base_model_id": base_model_id,
+                "anonimize": anonimize,
+                "hf_token": settings.HF_TOKEN,
+                "hf_username": settings.HF_USERNAME,
+            }
+        }
+    )
+
+    logger.info(f"RunPod job submitted: {job.job_id}")
+
+    # Wait for completion with timeout
+    start_time = time.time()
+    while job.status() not in ["COMPLETED", "FAILED"]:
+        if time.time() - start_time > settings.RUNPOD_TIMEOUT:
+            raise TimeoutError(f"RunPod job timed out after {settings.RUNPOD_TIMEOUT}s")
+
+        logger.info(
+            f"RunPod job status: {job.status()} (elapsed: {time.time() - start_time:.0f}s)"
+        )
+        time.sleep(settings.RUNPOD_POLL_INTERVAL)
+
+    # Get result
+    output = job.output()
+    if job.status() == "COMPLETED" and output.get("status") == "success":
+        model_repo_id = output["model_repo_id"]
+        logger.info(f"RunPod merge successful: {model_repo_id}")
+        return model_repo_id
+
+    # Job failed
+    error = output.get("error", "Unknown error")
+    raise Exception(f"RunPod job failed: {error}")

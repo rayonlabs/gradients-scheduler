@@ -19,6 +19,7 @@ from .models import (
 )
 from .utils import (
     load_config,
+    merge_and_upload_model_runpod,
     merge_and_upload_model_subprocess,
     update_model_tokenizer_subprocess,
 )
@@ -364,10 +365,18 @@ class GradientsTrainingScheduler:
                         logger.info(f"Chosen model repo: {trained_model_repository}")
 
                         try:
-                            merged_model = await merge_and_upload_model_subprocess(
-                                lora_model_id=trained_model_repository,
-                                base_model_id=self.task_request.model_repo,
-                            )
+                            if settings.USE_RUNPOD_FOR_MERGE:
+                                logger.info("Using RunPod for merge")
+                                merged_model = await merge_and_upload_model_runpod(
+                                    lora_model_id=trained_model_repository,
+                                    base_model_id=self.task_request.model_repo,
+                                )
+                            else:
+                                logger.info("Using local subprocess for merge")
+                                merged_model = await merge_and_upload_model_subprocess(
+                                    lora_model_id=trained_model_repository,
+                                    base_model_id=self.task_request.model_repo,
+                                )
                         except Exception as e:
                             logger.error(f"Error merging and uploading model: {e}")
                             merged_model = trained_model_repository

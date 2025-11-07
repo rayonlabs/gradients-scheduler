@@ -1,0 +1,22 @@
+# RunPod Serverless Container Requirements
+# These dependencies are needed for the model merge handler
+
+# Core ML libraries
+torch>=2.0.0
+transformers>=4.35.0
+peft>=0.7.0
+accelerate>=0.25.0
+
+# HuggingFace Hub
+huggingface-hub>=0.19.0
+
+# RunPod SDK
+runpod>=1.5.0
+
+# FastAPI and server
+fastapi>=0.94.0
+uvicorn>=0.20.0
+
+# Utilities
+pydantic>=2.0.0
+python-dotenv>=1.0.0
