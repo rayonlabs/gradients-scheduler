@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+from .models import TaskType
+
 from datasets import (
     Dataset,
     DatasetDict,
@@ -36,6 +38,8 @@ class DatasetsScheduler:
         self.random_seed = task_config.get("random_seed", 42)
         self.final_test_size = task_config.get("final_test_size", 0.05)
         self.samples_per_training = task_config.get("samples_per_training", 150_000)
+        task_type_str = self.task_config.get("task_type", "InstructText")
+        self.task_type = TaskType(task_type_str)
 
         if isinstance(self.dataset_configs, dict):
             items_str = str(sorted(self.dataset_configs.items()))
@@ -85,14 +89,17 @@ class DatasetsScheduler:
 
     def _standardize_dataset(self, dataset: Dataset, ds_config: dict) -> Dataset:
         """Standardize dataset column names to instruction, input, output.
-
+    
         Args:
             dataset: The dataset to standardize
             ds_config: The dataset configuration with field mappings
 
         Returns:
-            Dataset: Standardized dataset with canonical column names
+            Dataset: Standardized dataset with canonical column names, or original dataset for Chat tasks
         """
+
+        if self.task_type == TaskType.CHAT:
+            return dataset
         field_instruction = ds_config.get("field_instruction")
         field_input = ds_config.get("field_input")
         field_output = ds_config.get("field_output")
