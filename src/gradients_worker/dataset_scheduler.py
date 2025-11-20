@@ -156,7 +156,9 @@ class DatasetsScheduler:
                     if col != cst.DEFAULT_CHAT_COLUMN
                 ]
                 dataset = dataset.map(
-                    standardize_conversation, remove_columns=cols_to_remove
+                    standardize_conversation,
+                    remove_columns=cols_to_remove,
+                    load_from_cache_file=False,
                 )
                 logger.info(
                     f"Standardized chat dataset {ds_config[cst.KEY_NAME]} to use '{cst.DEFAULT_CHAT_COLUMN}' with '{cst.DEFAULT_CHAT_ROLE_FIELD}' and '{cst.DEFAULT_CHAT_CONTENT_FIELD}' fields"
